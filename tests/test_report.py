@@ -207,3 +207,19 @@ def test_unknown_format_falls_back_to_text_rather_than_crashing():
 def test_wrap_never_exceeds_the_width():
     text = "word " * 80
     assert all(len(line) <= 40 for line in report.wrap(text, 40))
+
+
+# --- CLI output-file format -------------------------------------------------
+
+def test_out_file_format_follows_the_extension(tmp_path):
+    """`--out result.json` must contain JSON, not the terminal rendering.
+    Writing display text into a .json file breaks any pipeline reading it and
+    nobody notices until it fails downstream."""
+    from oasis_sustain import cli
+    assert cli.OUT_FORMAT_BY_SUFFIX[".json"] == "json"
+    assert cli.OUT_FORMAT_BY_SUFFIX[".html"] == "html"
+    assert cli.OUT_FORMAT_BY_SUFFIX[".txt"] == "text"
+
+
+def test_json_render_is_parseable():
+    json.loads(report.render(build_result(), "json"))

@@ -23,6 +23,11 @@ from pathlib import Path
 
 from . import __version__, carbon, config, meter, preflight, report
 
+# `--out` writes the format its extension implies. Anything else falls back to
+# whatever `--format` is displaying.
+OUT_FORMAT_BY_SUFFIX = {".json": "json", ".html": "html", ".htm": "html",
+                        ".txt": "text", ".md": "text"}
+
 
 def _add_check(sub):
     p = sub.add_parser(
@@ -53,7 +58,9 @@ def _add_check(sub):
     p.add_argument("--grid", type=float, default=None,
                    help="grid intensity gCO2e/kWh for the audience region")
     p.add_argument("--format", default="text", choices=["text", "json", "html"])
-    p.add_argument("--out", default=None, help="write the report to a file too")
+    p.add_argument("--out", default=None,
+                   help="also write the report to a file. The format follows "
+                        "the extension (.json/.html/.txt), not --format.")
     p.add_argument("--config", default=None, help="path to a config override")
     p.add_argument("--no-meter", action="store_true",
                    help="do not print this run's own footprint")
@@ -115,12 +122,18 @@ def cmd_check(args) -> int:
         head_budget=args.head_budget, grid=args.grid,
         destination=args.destination)
 
-    text = report.render(result, args.format)
-    print(text)
+    print(report.render(result, args.format))
+
     if args.out:
+        # Write the format the FILENAME implies, not the one being displayed.
+        # `--out result.json` means "give me the data"; writing the terminal
+        # rendering into a .json file produces something no pipeline can read
+        # and no one notices until it breaks downstream.
+        out_fmt = OUT_FORMAT_BY_SUFFIX.get(Path(args.out).suffix.lower(),
+                                           args.format)
         Path(args.out).parent.mkdir(parents=True, exist_ok=True)
-        Path(args.out).write_text(text, encoding="utf-8")
-        print(f"  Written: {args.out}", file=sys.stderr)
+        Path(args.out).write_text(report.render(result, out_fmt), encoding="utf-8")
+        print(f"  Written: {args.out} ({out_fmt})", file=sys.stderr)
 
     if not args.no_meter and args.format == "text":
         print(meter.footer_text(args.grid))
