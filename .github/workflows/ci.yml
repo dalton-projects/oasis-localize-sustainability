@@ -1,0 +1,49 @@
+# One job, two platforms, one Python version.
+#
+# A 3-OS x 4-Python matrix would be twelve runners burning energy to tell us
+# almost the same thing twelve times. That is exactly the waste this project
+# exists to measure, so we do not do it to ourselves. Two platforms because the
+# operator runs Windows and the upstream engine's worst bug to date was
+# Windows-only (an ffmpeg log path of /dev/stdout that silently produced
+# nothing); one Python version because the code is stdlib plus three libraries.
+#
+# The suite is fully offline. If a change makes CI need the network, fix the
+# test rather than the workflow.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install
+        run: python -m pip install --upgrade pip && pip install -e ".[dev]"
+
+      - name: Lint
+        run: ruff check src tests
+
+      - name: Test (offline)
+        run: pytest

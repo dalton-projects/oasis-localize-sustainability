@@ -1,0 +1,17 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+
+# Run artifacts. The meter ledger and any check output are per-run, never committed.
+reports/
+run-meter.json
+oasis-sustain.json
+
+# Local overrides
+.env

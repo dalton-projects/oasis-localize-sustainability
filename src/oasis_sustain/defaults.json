@@ -1,0 +1,65 @@
+{
+  "_comment": "Pre-flight gate configuration. Thresholds are config, not law: tune them with evidence, but never edit them to make a marginal job look like a win.",
+
+  "thresholds": {
+    "clear_win_months": 3,
+    "max_payback_months": 12,
+    "min_annual_kg": 2,
+    "already_efficient_g_per_view": 0.1
+  },
+
+  "sample": {
+    "max_pages": 5,
+    "get_budget": 20,
+    "head_budget": 60,
+    "per_request_timeout_s": 20
+  },
+
+  "politeness": {
+    "user_agent": "OasisSustain/1.0 (+https://github.com/Gabriel-Dalton/oasis-localize-sustainability; pre-flight sustainability check, owner-attested)",
+    "min_delay_s": 0.5,
+    "respect_robots": true,
+    "max_pages_hard_cap": 500
+  },
+
+  "carbon": {
+    "_comment": "grid_g_per_kwh: set to a regional figure when the audience is known. green_grid_g_per_kwh drives the green-hosting bonus; see scripts/carbon.py for the derivation. Leave null to use the model defaults.",
+    "grid_g_per_kwh": null,
+    "repeat_visit_factor": 0.85
+  },
+
+  "cost_model": {
+    "_comment": "One-time and recurring cost assumptions for the payback math. cpu_minutes_once is the pipeline's own compute; recrawl_change_fraction is the share of pages assumed to change between delta re-crawls.",
+    "cpu_minutes_once": 15,
+    "cpu_minutes_per_recrawl": 2,
+    "recrawl_change_fraction": 0.1,
+    "deploy_g_co2e": 1.0
+  },
+
+  "volatility_recrawls_per_month": {
+    "daily": 30,
+    "weekly": 4,
+    "monthly": 1,
+    "rarely": 0.25
+  },
+
+  "optimizer_trial": {
+    "_comment": "Settings for the real optimizer run on the sample. These must match what the full pipeline actually does, or the projection is a lie.",
+    "image_max_width": 1920,
+    "image_quality": 65,
+    "formats": ["avif", "webp"],
+    "strippable_js_patterns": [
+      "googletagmanager.com", "google-analytics.com", "analytics.google.com",
+      "googleadservices.com", "googlesyndication.com", "doubleclick.net",
+      "connect.facebook.net", "facebook.com/tr", "hotjar.com", "hotjar.io",
+      "segment.com", "segment.io", "cdn.segment", "mixpanel.com",
+      "hs-scripts.com", "hsforms", "hubspot", "intercom.io", "intercomcdn",
+      "clarity.ms", "fullstory.com", "snap.licdn.com",
+      "static.ads-twitter.com", "bat.bing.com", "onetrust", "cookielaw.org"
+    ]
+  },
+
+  "equivalents": {
+    "tree_kg_co2_per_year": 21
+  }
+}

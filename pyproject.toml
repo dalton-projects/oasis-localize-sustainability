@@ -1,0 +1,87 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "oasis-sustain"
+version = "1.0.0"
+description = "Measure whether optimizing a website saves more carbon than it costs, and refuse the job when it does not."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+authors = [{ name = "Oasis of Change" }]
+keywords = ["sustainability", "carbon", "co2", "web-performance",
+            "sustainable-web-design", "green-hosting"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3",
+  "Topic :: Internet :: WWW/HTTP :: Site Management",
+]
+
+# Deliberately small, and every one permissively licensed.
+#   Pillow   HPND    image trials (AVIF + WebP)
+#   brotli   MIT     transfer sizing, so "after" is measured on the wire
+#   tinycss2 BSD-3   CSS parsing for the unused-rule purge
+# Everything else is the standard library. There is no Node dependency: the
+# Sustainable Web Design v4 arithmetic is implemented in Python (see
+# METHODOLOGY.md) so the tool installs light and runs offline.
+#
+# NOT used, on licence grounds: EcoIndex CLI (CC BY-NC-ND, non-commercial and
+# no-derivatives) and GreenFrame (Elastic License).
+dependencies = [
+  "Pillow>=10.1",
+  "Brotli>=1.1",
+  "tinycss2>=1.2",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "ruff>=0.6"]
+
+[project.urls]
+Homepage = "https://github.com/Gabriel-Dalton/oasis-localize-sustainability"
+Issues = "https://github.com/Gabriel-Dalton/oasis-localize-sustainability/issues"
+Methodology = "https://github.com/Gabriel-Dalton/oasis-localize-sustainability/blob/main/METHODOLOGY.md"
+
+[project.scripts]
+oasis-sustain = "oasis_sustain.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+oasis_sustain = ["defaults.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# The suite must never need the network. If a test starts reaching out, that is
+# a bug in the test, not a reason to relax this.
+addopts = "-q"
+
+[tool.ruff]
+line-length = 90
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+# Pinned explicitly so a ruff upgrade cannot change what CI enforces.
+select = ["E", "F", "I", "UP", "B", "C4"]
+
+# Deliberately NOT selected, because the pattern they flag is correct here:
+#   BLE001 / S110 / S112  broad except-and-continue. Network fetches, image
+#     decodes and CSS parses all run against hostile third-party input. A run
+#     must degrade to "could not measure that resource" rather than crash
+#     halfway through and leave the operator with no verdict at all. Every one
+#     of these is paired with a fallback that keeps the measurement honest.
+#   DTZ011  date.today() in the report footer is a local calendar date. A
+#     timezone-aware timestamp would be precision we do not have and do not need.
+
+[tool.ruff.lint.per-file-ignores]
+# Test fixtures are deliberately verbose and repetitive.
+# dict(...) with keyword args reads better than a literal when the keys
+# mirror a function signature, which is what these fixtures do.
+"tests/*" = ["E501", "C408"]
+# The demo fixture embeds CSS and HTML as string literals; wrapping them to
+# 90 columns would misrepresent what a real stylesheet looks like.
+"examples/*" = ["E501"]
