@@ -85,11 +85,48 @@ def optimize(data: bytes, ctx: dict):
             best_bytes)
 
 
-def rendered_width(html: str) -> int:
-    """Largest width the markup actually declares, capped to something sane.
+def declared_widths(html: str, base_url: str = "") -> dict[str, int]:
+    """Map each <img>'s resolved URL to the width IT declares.
 
-    Returns 0 when the page declares nothing, so the caller can fall back to a
-    configured maximum rather than guessing small and over-claiming the saving.
+    Per image, never page-wide. An earlier version took the largest `width`
+    attribute anywhere on the page and applied it to every image, which fails
+    badly in both directions and was caught on a real site: a page whose only
+    width attributes were on small logos yielded a cap of 100px, so the gate
+    "resized" a full-bleed hero to 100px wide and reported a 98% saving nobody
+    could ever deliver. Overstating a saving is the one failure this project
+    exists to prevent.
+
+    Images sized by CSS (the modern norm) declare nothing and are absent from
+    this map, so the caller falls back to its configured maximum rather than
+    inventing a display size.
+    """
+    import re
+    import urllib.parse
+
+    out: dict[str, int] = {}
+    for tag in re.findall(r'<img\b[^>]*>', html, re.I):
+        m_src = re.search(r'\bsrc\s*=\s*["\']([^"\']+)', tag, re.I)
+        m_w = re.search(r'\bwidth\s*=\s*["\']?(\d+)', tag, re.I)
+        if not m_src or not m_w:
+            continue
+        width = int(m_w.group(1))
+        if not (16 <= width <= 4000):        # placeholder or spacer, not a size
+            continue
+        url = m_src.group(1).strip()
+        if base_url:
+            url = urllib.parse.urldefrag(
+                urllib.parse.urljoin(base_url, url))[0]
+        # Same image used twice at different sizes: keep the larger, so we
+        # never resize below what some part of the page actually shows.
+        out[url] = max(out.get(url, 0), width)
+    return out
+
+
+def rendered_width(html: str) -> int:
+    """Largest width declared anywhere on the page, or 0 if none.
+
+    Retained for callers that want a page-level hint. Do NOT use it to size an
+    individual image; use `declared_widths` for that. See the note there.
     """
     import re
     widths = [int(w) for w in re.findall(r'\bwidth\s*=\s*["\']?(\d+)', html, re.I)

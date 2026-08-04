@@ -71,6 +71,10 @@ def render_text(r: dict) -> str:
     p, s = r["payback"], r["sample"]
     L.append("  WHAT WE MEASURED (sample pass, no AI)")
     L.append(f"    pages sampled          : {s['pages_sampled']}")
+    if s.get("resources_referenced"):
+        L.append(f"    resources sized        : {s.get('resources_sized', 0)} of "
+                 f"{s['resources_referenced']} referenced "
+                 f"({s.get('coverage_ratio', 1) * 100:.0f}% coverage)")
     L.append(f"    weight per view        : {p['w_before_bytes']:,} B -> "
              f"{p['w_after_bytes']:,} B  ({p['weight_cut_pct']}% lighter)")
     L.append(f"    carbon per view        : {p['g_per_view_before']:.3f} g -> "

@@ -289,3 +289,38 @@ def test_classify(url, ctype, want):
 def test_result_serializes_for_the_report():
     d = optimize.optimize("html", SAMPLE_HTML).as_dict()
     assert set(d) >= {"kind", "before", "after", "saved", "reduction_pct", "method"}
+
+
+# --- per-image widths (regression: page-wide max oversold savings) ----------
+
+WIDTH_HTML = """
+<img src="/logo.png" width="100" alt="logo">
+<img src="/hero.jpg" alt="hero">
+<img src="/card.jpg" width="600" alt="card">
+"""
+
+
+def test_declared_widths_are_per_image_not_page_wide():
+    """A page whose only width attribute sits on a 100px logo must NOT cause a
+    full-bleed hero to be 'resized' to 100px. That bug reported a 98% saving
+    nobody could deliver, on a real site."""
+    w = images.declared_widths(WIDTH_HTML, "https://site.test/page/")
+    assert w["https://site.test/logo.png"] == 100
+    assert w["https://site.test/card.jpg"] == 600
+    # Sized by CSS: absent, so the caller falls back to its configured maximum
+    # rather than inheriting the logo's 100px.
+    assert "https://site.test/hero.jpg" not in w
+
+
+def test_declared_widths_keep_the_larger_when_an_image_repeats():
+    w = images.declared_widths(
+        '<img src="/a.png" width="200"><img src="/a.png" width="800">',
+        "https://site.test/")
+    assert w["https://site.test/a.png"] == 800
+
+
+def test_declared_widths_ignore_spacer_and_absurd_values():
+    w = images.declared_widths(
+        '<img src="/s.gif" width="1"><img src="/x.png" width="99999">',
+        "https://site.test/")
+    assert w == {}

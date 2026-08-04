@@ -110,6 +110,11 @@ def sample_pass(sample_urls: list[str], budget: fetch.Budget,
     dynamic = set()
     needs_headless = login_wall = False
     pages_seen = 0
+    # Coverage: how many referenced resources we actually sized, against how
+    # many the pages referenced. A count of skips is not enough on its own,
+    # because "12 uncounted" means nothing without the denominator.
+    referenced = 0
+    sized = 0
 
     for purl in sample_urls:
         body, ctype, wire = budget.get(purl)
@@ -136,10 +141,14 @@ def sample_pass(sample_urls: list[str], budget: fetch.Budget,
         if re.findall(r'<img(?![^>]*\balt=)', html, re.I):
             co_benefits.append(f"images without alt text: {purl}")
 
-        cap_w = min(_images.rendered_width(html) or cap_default, cap_default)
+        # Per-image declared widths. Images sized by CSS are absent from this
+        # map and fall back to cap_default, so we never invent a display size.
+        widths = _images.declared_widths(html, purl)
         tokens = _css.html_tokens(html)
 
-        for rurl in page_resources(html, purl):
+        page_res = page_resources(html, purl)
+        referenced += len(page_res)
+        for rurl in page_res:
             info = budget.head(rurl)
             if not info:
                 continue
@@ -147,6 +156,7 @@ def sample_pass(sample_urls: list[str], budget: fetch.Budget,
             size = info.get("bytes")
             if size is None:
                 continue
+            sized += 1
             if kind == "other" and rurl.lower().endswith(".js"):
                 kind = "js"
             before[kind] += size
@@ -165,6 +175,7 @@ def sample_pass(sample_urls: list[str], budget: fetch.Budget,
                 data, _, rwire = budget.get(
                     rurl, max_bytes=12_000_000 if kind == "images" else 4_000_000)
                 if data is not None:
+                    cap_w = min(widths.get(rurl, cap_default), cap_default)
                     ctx = {**ctx_base, "max_width": cap_w, "html_tokens": tokens}
                     r = optimize(kind, data, wire_before=rwire or size,
                                  url=rurl, context=ctx)
@@ -194,6 +205,9 @@ def sample_pass(sample_urls: list[str], budget: fetch.Budget,
         # which is the safe direction, but the reader has to be told.
         "coverage_complete": budget.complete,
         "resources_uncounted": budget.skipped,
+        "resources_referenced": referenced,
+        "resources_sized": sized,
+        "coverage_ratio": (sized / referenced) if referenced else 1.0,
     }
 
 

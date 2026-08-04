@@ -8,11 +8,13 @@
     "already_efficient_g_per_view": 0.1
   },
 
+  "_sample_comment": "get_budget buys full bodies and is the expensive one, so it stays small. head_budget buys headers only, about 400 bytes each, so 240 of them costs roughly 96 kB: a rounding error next to one view of any site heavy enough to be worth optimizing. A stingy head budget was measured undercounting a real CMS site's page weight by 6.4x, which is far worse than the transfer it saved.",
   "sample": {
     "max_pages": 5,
     "get_budget": 20,
-    "head_budget": 60,
-    "per_request_timeout_s": 20
+    "head_budget": 240,
+    "per_request_timeout_s": 20,
+    "min_coverage_for_confidence": 0.9
   },
 
   "politeness": {
